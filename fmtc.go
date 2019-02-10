@@ -32,7 +32,7 @@ const indexHTML = `<!DOCTYPE html>
 </html>`
 
 func format(src string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "indent")
@@ -54,6 +54,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.Write([]byte(indexHTML))
+		return
 	}
 
 	w.Write(out)
