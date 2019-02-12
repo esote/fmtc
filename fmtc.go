@@ -15,14 +15,21 @@ const indexHTML = `<!DOCTYPE html>
 		<meta charset="utf-8">
 		<title>C Formatter</title>
 		<meta name="author" content="Esote">
-		<meta name="description" content="Format C code using the indent(1) command.">
+		<meta name="description"
+			content="Format C code using the indent(1) command.">
 	</head>
 	<body>
 		<h1>C Formatter</h1>
-		<p>Format C code using the <code><a href="https://man.openbsd.org/indent.1" target="_blank">indent(1)</a></code> command. Author: <a href="https://esote.net" target="_blank">Esote</a>. <a href="https://github.com/esote/fmtc" target="_blank">View source</a>.</p>
+		<p>Format C code using the <code>
+			<a href="https://man.openbsd.org/indent.1"
+			target="_blank">indent(1)</a></code> command. Author:
+			<a href="https://esote.net" target="_blank">Esote</a>.
+			<a href="https://github.com/esote/fmtc"
+			target="_blank">View source</a>.</p>
 		<form action="/format" method="POST">
 			<p><input type="submit" value="Format"></p>
-			<textarea id="src" cols="80" rows="20" name="src"></textarea>
+			<textarea id="src" cols="80" rows="20" name="src">
+			</textarea>
 		</form>
 	</body>
 </html>`
@@ -73,6 +80,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	if _, err := openshim.Pledge("stdio inet proc exec",
+		"stdio rpath wpath cpath"); err != nil {
+		log.Fatal(err)
+	}
+
 	http.HandleFunc("/", index)
 	http.HandleFunc("/format", format)
 	log.Fatal(http.ListenAndServe(":8080", nil))
