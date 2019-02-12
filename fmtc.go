@@ -48,6 +48,7 @@ func format(w http.ResponseWriter, r *http.Request) {
 	src := r.PostFormValue("src")
 
 	src = strings.Replace(src, "\r", "", -1)
+	src += "\n"
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
