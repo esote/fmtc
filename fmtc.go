@@ -14,56 +14,66 @@ const indexHTML = `<!DOCTYPE html>
 	<head>
 		<meta charset="utf-8">
 		<title>C Formatter</title>
-		<style>
-			#src {
-				margin-bottom: 1rem;
-				font-family: monospace;
-				white-space: pre;
-			}
-		</style>
+		<meta name="author" content="Esote">
+		<meta name="description" content="Format C code using the indent(1) command.">
 	</head>
 	<body>
 		<h1>C Formatter</h1>
-		<form action="/" method="POST">
+		<p>Format C code using the <code><a href="https://man.openbsd.org/indent.1" target="_blank">indent(1)</a></code> command. Author: <a href="https://esote.net" target="_blank">Esote</a>. <a href="https://github.com/esote/fmtc" target="_blank">View source</a>.</p>
+		<form action="/format" method="POST">
+			<p><input type="submit" value="Format"></p>
 			<textarea id="src" cols="80" rows="20" name="src"></textarea>
-			<br>
-			<input type="submit" value="Submit">
 		</form>
 	</body>
 </html>`
 
-func format(src string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+func format(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusMethodNotAllowed)
+		return
+	}
 
-	src = strings.Replace(src, "\r", "", -1)
-
-	cmd := exec.CommandContext(ctx, "indent")
-
-	cmd.Stdin = strings.NewReader(src)
-
-	return cmd.Output()
-}
-
-func index(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" || r.ParseForm() != nil {
-		w.Write([]byte(indexHTML))
+	if err := r.ParseForm(); err != nil {
+		http.Redirect(w, r, "/", http.StatusBadRequest)
 		return
 	}
 
 	src := r.PostFormValue("src")
 
-	out, err := format(src)
+	src = strings.Replace(src, "\r", "", -1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "indent")
+
+	cmd.Stdin = strings.NewReader(src)
+
+	out, err := cmd.Output()
 
 	if err != nil {
-		w.Write([]byte(indexHTML))
+		if err == context.DeadlineExceeded {
+			http.Redirect(w, r, "/", http.StatusRequestTimeout)
+		} else {
+			http.Redirect(w, r, "/", http.StatusBadRequest)
+		}
 		return
 	}
 
 	w.Write(out)
 }
 
+func index(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Redirect(w, r, "/", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Write([]byte(indexHTML))
+}
+
 func main() {
 	http.HandleFunc("/", index)
+	http.HandleFunc("/format", format)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
