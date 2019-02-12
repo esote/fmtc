@@ -19,6 +19,12 @@ const indexHTML = `<!DOCTYPE html>
 		<meta name="author" content="Esote">
 		<meta name="description"
 			content="Format C code using the indent(1) command.">
+		<style>
+			textarea {
+				font-family: monospace;
+				white-space: pre;
+			}
+		</style>
 	</head>
 	<body>
 		<h1>C Formatter</h1>
@@ -30,7 +36,7 @@ const indexHTML = `<!DOCTYPE html>
 			target="_blank">View source</a>.</p>
 		<form action="/format" method="POST">
 			<p><input type="submit" value="Format"></p>
-			<textarea id="src" cols="80" rows="20" name="src"></textarea>
+			<textarea cols="80" rows="20" name="src"></textarea>
 		</form>
 	</body>
 </html>`
