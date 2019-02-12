@@ -30,8 +30,7 @@ const indexHTML = `<!DOCTYPE html>
 			target="_blank">View source</a>.</p>
 		<form action="/format" method="POST">
 			<p><input type="submit" value="Format"></p>
-			<textarea id="src" cols="80" rows="20" name="src">
-			</textarea>
+			<textarea id="src" cols="80" rows="20" name="src"></textarea>
 		</form>
 	</body>
 </html>`
