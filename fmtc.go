@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/esote/openshim"
 )
 
 const indexHTML = `<!DOCTYPE html>
