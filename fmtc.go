@@ -23,6 +23,7 @@ const indexHTML = `<!DOCTYPE html>
 		</style>
 	</head>
 	<body>
+		<h1>C Formatter</h1>
 		<form action="/" method="POST">
 			<textarea id="src" cols="80" rows="20" name="src"></textarea>
 			<br>
@@ -32,8 +33,10 @@ const indexHTML = `<!DOCTYPE html>
 </html>`
 
 func format(src string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
+	src = strings.Replace(src, "\r", "", -1)
 
 	cmd := exec.CommandContext(ctx, "indent")
 
