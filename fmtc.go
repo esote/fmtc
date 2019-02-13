@@ -60,7 +60,7 @@ func format(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "/usr/bin/indent", "-st")
+	cmd := exec.CommandContext(ctx, "./indent")
 
 	cmd.Stdin = strings.NewReader(src)
 
@@ -89,7 +89,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	if _, err := openshim.Pledge("stdio inet proc exec",
-		"stdio rpath wpath cpath"); err != nil {
+		"stdio rpath"); err != nil {
 		log.Fatal(err)
 	}
 
