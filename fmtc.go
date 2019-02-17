@@ -60,11 +60,11 @@ func format(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "./indent")
+	cmd := exec.CommandContext(ctx, "./indent.out")
 
 	cmd.Stdin = strings.NewReader(src)
 
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
