@@ -88,6 +88,24 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	if _, err := openshim.Pledge("stdio inet proc exec unveil",
+		"stdio rpath"); err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := openshim.Unveil("/usr/lib/", "r"); err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := openshim.Unveil("/usr/libexec/", "r"); err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := openshim.Unveil("/root/indent/indent.out",
+		"x"); err != nil {
+		log.Fatal(err)
+	}
+
 	if _, err := openshim.Pledge("stdio inet proc exec",
 		"stdio rpath"); err != nil {
 		log.Fatal(err)
