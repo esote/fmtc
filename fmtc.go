@@ -97,7 +97,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, err := openshim.Unveil("/usr/libexec/", "r"); err != nil {
+	if _, err := openshim.Unveil("/usr/libexec/ld.so", "r"); err != nil {
 		log.Fatal(err)
 	}
 
