@@ -101,7 +101,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, err := openshim.Unveil("/root/indent/indent.out",
+	if _, err := openshim.Unveil("./indent.out",
 		"x"); err != nil {
 		log.Fatal(err)
 	}
