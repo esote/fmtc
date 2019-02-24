@@ -28,12 +28,16 @@ const indexHTML = `<!DOCTYPE html>
 	</head>
 	<body>
 		<h1>C Formatter</h1>
-		<p>Format C code using the <code>
-			<a href="https://man.openbsd.org/indent.1"
-			target="_blank">indent(1)</a></code> command. Author:
-			<a href="https://esote.net" target="_blank">Esote</a>.
+		<p>Format C code according to the OpenBSD kernel normal form.
+		</p>
+		<p>Author: <a href="https://github.com/esote/"
+			target="_blank">Esote</a>.
+
 			<a href="https://github.com/esote/fmtc"
-			target="_blank">View source</a>.</p>
+			target="_blank">Webserver source</a>.
+
+			<a href="https://github.com/esote/indent"
+			target="_blank">Formatter source</a>.</p>
 		<form action="/format" method="POST">
 			<p><input type="submit" value="Format"></p>
 			<textarea cols="80" rows="20" name="src"></textarea>
