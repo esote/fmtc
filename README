@@ -1,2 +1,3 @@
-C formatter for the OpenBSD kernel normal form. Available for those without
-access to an OpenBDS machine.
+C formatter for the OpenBSD kernel normal form. Live at https://esote.net:8443.
+
+Uses github.com/esote/indent to parse and format code.
