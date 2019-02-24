@@ -1,1 +1,2 @@
-Format C code.
+C formatter for the OpenBSD kernel normal form. Available for those without
+access to an OpenBDS machine.
