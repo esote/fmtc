@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/esote/graceful"
 	"github.com/esote/openshim"
 )
 
@@ -92,7 +95,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if _, err := openshim.Pledge("stdio inet proc exec unveil",
+	if _, err := openshim.Pledge("stdio inet proc exec rpath unveil",
 		"stdio rpath"); err != nil {
 		log.Fatal(err)
 	}
@@ -105,17 +108,56 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// letsencrypt key and cert, /etc/letsencrypt/live symlinks to archive/
+	if _, err := openshim.Unveil("/etc/letsencrypt/archive/",
+		"r"); err != nil {
+		log.Fatal(err)
+	}
+
 	if _, err := openshim.Unveil("./indent.out",
 		"x"); err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := openshim.Pledge("stdio inet proc exec",
+	if _, err := openshim.Pledge("stdio inet proc exec rpath",
 		"stdio rpath"); err != nil {
 		log.Fatal(err)
 	}
 
-	http.HandleFunc("/", index)
-	http.HandleFunc("/format", format)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	mux := http.NewServeMux()
+
+	cfg := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		CurvePreferences: []tls.CurveID{
+			tls.CurveP521,
+			tls.X25519,
+		},
+		PreferServerCipherSuites: true,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		},
+	}
+
+	server := &http.Server{
+		Addr:         ":8443",
+		Handler:      mux,
+		TLSConfig:    cfg,
+		TLSNextProto: nil,
+	}
+
+	const (
+		cert = "/etc/letsencrypt/live/esote.net/fullchain.pem"
+		key  = "/etc/letsencrypt/live/esote.net/privkey.pem"
+	)
+
+	mux.HandleFunc("/", index)
+	mux.HandleFunc("/format", format)
+	graceful.Graceful(server, func() {
+		err := server.ListenAndServeTLS(cert, key)
+
+		if err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}, os.Interrupt)
 }
