@@ -57,12 +57,12 @@ func setHeaders(w http.ResponseWriter) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "deny")
 	w.Header().Set("X-XSS-Protection", "1")
-	w.Header().Set("Content-Security-Policy", "default-src 'none';")
 }
 
 func format(w http.ResponseWriter, r *http.Request) {
 	setHeaders(w)
 	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Security-Policy", "default-src 'none';")
 
 	if r.Method != "POST" {
 		http.Error(w, "bad http verb", http.StatusMethodNotAllowed)
@@ -108,6 +108,8 @@ func format(w http.ResponseWriter, r *http.Request) {
 
 func index(w http.ResponseWriter, r *http.Request) {
 	setHeaders(w)
+	w.Header().Set("Content-Security-Policy", "default-src 'none';"+
+		"style-src 'unsafe-inline'")
 
 	if r.Method != "GET" {
 		http.Error(w, "bad http verb", http.StatusMethodNotAllowed)
