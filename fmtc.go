@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"flag"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -11,7 +13,7 @@ import (
 	"time"
 
 	"github.com/esote/graceful"
-	"github.com/esote/openshim"
+	"golang.org/x/sys/unix"
 )
 
 const indexHTML = `<!DOCTYPE html>
@@ -95,36 +97,36 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if _, err := openshim.Pledge("stdio inet proc exec rpath unveil",
-		"stdio rpath"); err != nil {
+	// force init of lazy sysctls
+	if l, err := net.Listen("tcp", "localhost:0"); err != nil {
 		log.Fatal(err)
-	}
-
-	if _, err := openshim.Unveil("/usr/lib/", "r"); err != nil {
-		log.Fatal(err)
-	}
-
-	if _, err := openshim.Unveil("/usr/libexec/ld.so", "r"); err != nil {
-		log.Fatal(err)
+	} else {
+		l.Close()
 	}
 
 	// letsencrypt key and cert, /etc/letsencrypt/live symlinks to archive/
-	if _, err := openshim.Unveil("/etc/letsencrypt/archive/",
-		"r"); err != nil {
+	if err := unix.Unveil("/etc/letsencrypt/archive/", "r"); err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := openshim.Unveil("./indent.out",
-		"x"); err != nil {
+	if err := unix.Unveil("./indent.out", "x"); err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := openshim.Pledge("stdio inet proc exec rpath",
-		"stdio rpath"); err != nil {
+	if err := unix.Pledge("stdio inet proc exec rpath",
+		"stdio"); err != nil {
 		log.Fatal(err)
 	}
 
-	mux := http.NewServeMux()
+	var (
+		cert string
+		key  string
+	)
+
+	flag.StringVar(&cert, "cert", "server.crt", "TLS certificate file")
+	flag.StringVar(&key, "key", "server.key", "TLS key file")
+
+	flag.Parse()
 
 	cfg := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -139,6 +141,11 @@ func main() {
 		},
 	}
 
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", index)
+	mux.HandleFunc("/format", format)
+
 	server := &http.Server{
 		Addr:         ":8443",
 		Handler:      mux,
@@ -146,13 +153,6 @@ func main() {
 		TLSNextProto: nil,
 	}
 
-	const (
-		cert = "/etc/letsencrypt/live/esote.net/fullchain.pem"
-		key  = "/etc/letsencrypt/live/esote.net/privkey.pem"
-	)
-
-	mux.HandleFunc("/", index)
-	mux.HandleFunc("/format", format)
 	graceful.Graceful(server, func() {
 		err := server.ListenAndServeTLS(cert, key)
 
