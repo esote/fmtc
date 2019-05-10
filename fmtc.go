@@ -50,20 +50,37 @@ const indexHTML = `<!DOCTYPE html>
 	</body>
 </html>`
 
+func setHeaders(w http.ResponseWriter) {
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Strict-Transport-Security", "max-age=31536000;"+
+		"includeSubDomains;preload")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "deny")
+	w.Header().Set("X-XSS-Protection", "1")
+	w.Header().Set("Content-Security-Policy", "default-src 'none';")
+}
+
 func format(w http.ResponseWriter, r *http.Request) {
+	setHeaders(w)
+	w.Header().Set("Content-Type", "text/plain")
+
 	if r.Method != "POST" {
-		http.Redirect(w, r, "/", http.StatusMethodNotAllowed)
+		http.Error(w, "bad http verb", http.StatusMethodNotAllowed)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Redirect(w, r, "/", http.StatusBadRequest)
+		http.Error(w, "form invalid", http.StatusBadRequest)
 		return
 	}
 
 	src := r.PostFormValue("src")
-
 	src = strings.Replace(src, "\r", "", -1)
+
+	if src == "" {
+		return
+	}
+
 	src += "\n"
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -77,9 +94,11 @@ func format(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Redirect(w, r, "/", http.StatusRequestTimeout)
+			http.Error(w, "execution time deadline exceeded",
+				http.StatusRequestTimeout)
 		} else {
-			http.Redirect(w, r, "/", http.StatusBadRequest)
+			http.Error(w, "error parsing input",
+				http.StatusInternalServerError)
 		}
 		return
 	}
@@ -88,8 +107,10 @@ func format(w http.ResponseWriter, r *http.Request) {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
+	setHeaders(w)
+
 	if r.Method != "GET" {
-		http.Redirect(w, r, "/", http.StatusMethodNotAllowed)
+		http.Error(w, "bad http verb", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -105,6 +126,7 @@ func main() {
 	}
 
 	// letsencrypt key and cert, /etc/letsencrypt/live symlinks to archive/
+
 	if err := unix.Unveil("/etc/letsencrypt/archive/", "r"); err != nil {
 		log.Fatal(err)
 	}
@@ -118,15 +140,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var (
-		cert string
-		key  string
-	)
-
-	flag.StringVar(&cert, "cert", "server.crt", "TLS certificate file")
-	flag.StringVar(&key, "key", "server.key", "TLS key file")
-
-	flag.Parse()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", index)
+	mux.HandleFunc("/format", format)
 
 	cfg := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -141,22 +157,25 @@ func main() {
 		},
 	}
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/", index)
-	mux.HandleFunc("/format", format)
-
-	server := &http.Server{
+	srv := &http.Server{
 		Addr:         ":8443",
 		Handler:      mux,
 		TLSConfig:    cfg,
 		TLSNextProto: nil,
 	}
 
-	graceful.Graceful(server, func() {
-		err := server.ListenAndServeTLS(cert, key)
+	var (
+		cert string
+		key  string
+	)
 
-		if err != http.ErrServerClosed {
+	flag.StringVar(&cert, "cert", "server.crt", "TLS certificate file")
+	flag.StringVar(&key, "key", "server.key", "TLS key file")
+
+	flag.Parse()
+
+	graceful.Graceful(srv, func() {
+		if err := srv.ListenAndServeTLS(cert, key); err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}, os.Interrupt)
