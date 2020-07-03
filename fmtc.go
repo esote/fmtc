@@ -3,15 +3,12 @@ package main
 import (
 	"context"
 	"log"
-	"net"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/esote/graceful"
-	"golang.org/x/sys/unix"
+	"github.com/esote/openshim2"
 )
 
 const indexHTML = `<!DOCTYPE html>
@@ -24,7 +21,7 @@ const indexHTML = `<!DOCTYPE html>
 			content="Format C code using the indent(1) command.">
 		<style>
 			textarea {
-				font-family: monospace;
+				font-family: monospace, monospace;
 				white-space: pre;
 			}
 		</style>
@@ -50,12 +47,8 @@ const indexHTML = `<!DOCTYPE html>
 
 func setHeaders(w http.ResponseWriter) {
 	w.Header().Set("Referrer-Policy", "no-referrer")
-
-	// Used within a reverse proxy, Strict-Transport-Security header is
-	// copied to the proxy.
 	w.Header().Set("Strict-Transport-Security", "max-age=31536000;"+
 		"includeSubDomains;preload")
-
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "deny")
 	w.Header().Set("X-XSS-Protection", "1")
@@ -85,13 +78,11 @@ func format(w http.ResponseWriter, r *http.Request) {
 
 	src += "\n"
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "./indent.out")
-
 	cmd.Stdin = strings.NewReader(src)
-
 	out, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -105,7 +96,7 @@ func format(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(out)
+	_, _ = w.Write(out)
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -118,23 +109,14 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(indexHTML))
+	_, _ = w.Write([]byte(indexHTML))
 }
 
 func main() {
-	// force init of lazy sysctls
-	if l, err := net.Listen("tcp", "localhost:0"); err != nil {
-		log.Fatal(err)
-	} else {
-		l.Close()
-	}
-
-	if err := unix.Unveil("./indent.out", "x"); err != nil {
+	if err := openshim2.Unveil("./indent.out", "x"); err != nil {
 		log.Fatal(err)
 	}
-
-	if err := unix.Pledge("stdio inet proc exec rpath",
-		"stdio"); err != nil {
+	if err := openshim2.Pledge("stdio inet proc exec rpath", "stdio"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -147,9 +129,7 @@ func main() {
 		Handler: mux,
 	}
 
-	graceful.Graceful(srv, func() {
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
-	}, os.Interrupt)
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
